@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
+import { 
+  CheckCircle as CompletedIcon,
+  Error as ErrorIcon,
+  HourglassEmpty as WaitingIcon,
+  Autorenew as ProcessingIcon
+} from '@mui/icons-material';
 
 type StepStatus = 'waiting' | 'error' | 'processing' | 'completed';
 
@@ -12,6 +18,13 @@ interface ProcessingStep {
 interface ProcessingStepsProps {
   initialStatus?: 'processed' | 'processing' | 'queued';
 }
+
+const statusIcons = {
+  waiting: WaitingIcon,
+  error: ErrorIcon,
+  processing: ProcessingIcon,
+  completed: CompletedIcon
+};
 
 const statusColors = {
   waiting: '#2196F3',
@@ -32,7 +45,6 @@ const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus = 'queu
     if (initialStatus === 'processed') {
       setSteps(steps.map(step => ({ ...step, status: 'completed' })));
     } else if (initialStatus === 'queued') {
-      // Анимация последовательного выполнения шагов
       const delays = [2000, 4000, 6000, 7000];
       steps.forEach((_, index) => {
         setTimeout(() => {
@@ -47,7 +59,6 @@ const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus = 'queu
         }, delays[index]);
       });
     } else if (initialStatus === 'processing') {
-      // Находим первый шаг со статусом 'waiting' и делаем его 'processing'
       const firstWaitingIndex = steps.findIndex(step => step.status === 'waiting');
       if (firstWaitingIndex !== -1) {
         setSteps(prev => prev.map((step, i) => 
@@ -61,54 +72,66 @@ const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus = 'queu
     <Paper 
       elevation={3} 
       sx={{ 
-        p: 3,
+        p: 2,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 2
+        gap: 1.5,
+        borderRadius: 3
       }}
     >
       <Typography variant="h6" gutterBottom>
         Этапы обработки
       </Typography>
-      {steps.map((step, index) => (
-        <Box
-          key={step.name}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            p: 2,
-            borderRadius: 1,
-            backgroundColor: statusColors[step.status],
-            color: 'white',
-            position: 'relative'
-          }}
-        >
-          <Typography>{step.name}</Typography>
-          {step.status === 'processing' && (
-            <motion.div
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [1, 0.5, 1]
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                backgroundColor: 'white',
-                position: 'absolute',
-                right: 16
-              }}
-            />
-          )}
-        </Box>
-      ))}
+      {steps.map((step, index) => {
+        const StatusIcon = statusIcons[step.status];
+        return (
+          <Box
+            key={step.name}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              p: 1.5,
+              borderRadius: 2,
+              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+              position: 'relative'
+            }}
+          >
+            <StatusIcon sx={{ color: statusColors[step.status] }} />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body1">{step.name}</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {step.status === 'waiting' && 'Ожидание'}
+                {step.status === 'processing' && 'В процессе'}
+                {step.status === 'completed' && 'Завершено'}
+                {step.status === 'error' && 'Ошибка'}
+              </Typography>
+            </Box>
+            {step.status === 'processing' && (
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [1, 0.5, 1]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: statusColors[step.status],
+                  position: 'absolute',
+                  right: 12
+                }}
+              />
+            )}
+          </Box>
+        );
+      })}
     </Paper>
   );
 };

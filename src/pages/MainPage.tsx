@@ -66,16 +66,7 @@ export const MainPage: React.FC = () => {
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
       <Header />
-      {/* <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={() => navigate('/processing', { state: { status: 'queued' } })}
-        >
-          Обработать конференцию
-        </Button>
-      </Box>*/ }
-
+      
       {/* Основной контент */}
       <Box sx={{ 
         display: 'flex',
