@@ -107,6 +107,7 @@ export const MainPage: React.FC = () => {
                   status={conference.status}
                   onEdit={() => handleEdit(conference.id)}
                   onDelete={() => handleDelete(conference.id)}
+                  onClick={() => handleConferenceClick(conference)}
                 />
               </motion.div>
             ))}

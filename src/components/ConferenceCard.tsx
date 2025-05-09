@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, IconButton, Typography, Box, Paper, Chip } from '@mui/material';
+import { Card, CardContent, IconButton, Typography, Box } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -9,6 +9,7 @@ interface ConferenceCardProps {
   status: 'processed' | 'processing' | 'queued';
   onEdit: () => void;
   onDelete: () => void;
+  onClick: () => void;
 }
 
 const statusColors = {
@@ -28,7 +29,8 @@ export const ConferenceCard: React.FC<ConferenceCardProps> = ({
   uploadDate,
   status,
   onEdit,
-  onDelete
+  onDelete,
+  onClick
 }) => {
   return (
     <motion.div
@@ -37,15 +39,19 @@ export const ConferenceCard: React.FC<ConferenceCardProps> = ({
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
     >
-      <Card sx={{ 
-        minWidth: 275,
-        mb: 2,
-        '&:hover': {
-          boxShadow: 6,
-          transform: 'translateY(-2px)',
-          transition: 'all 0.3s ease'
-        }
-      }}>
+      <Card 
+        sx={{ 
+          minWidth: 275,
+          mb: 2,
+          cursor: 'pointer',
+          '&:hover': {
+            boxShadow: 6,
+            transform: 'translateY(-2px)',
+            transition: 'all 0.3s ease'
+          }
+        }}
+        onClick={onClick}
+      >
         <CardContent>
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Box>
@@ -69,10 +75,22 @@ export const ConferenceCard: React.FC<ConferenceCardProps> = ({
               >
                 {statusText[status]}
               </Box>
-              <IconButton onClick={onEdit} color="primary">
+              <IconButton 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }} 
+                color="primary"
+              >
                 <EditIcon />
               </IconButton>
-              <IconButton onClick={onDelete} color="error">
+              <IconButton 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }} 
+                color="error"
+              >
                 <DeleteIcon />
               </IconButton>
             </Box>
