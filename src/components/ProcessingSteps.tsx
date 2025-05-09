@@ -36,11 +36,24 @@ const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus = 'queu
       const delays = [2000, 4000, 6000, 7000];
       steps.forEach((_, index) => {
         setTimeout(() => {
-          setSteps(prev => prev.map((step, i) => 
-            i === index ? { ...step, status: 'completed' } : step
-          ));
+          setSteps(prev => prev.map((step, i) => {
+            if (i === index) {
+              return { ...step, status: 'completed' };
+            } else if (i === index + 1) {
+              return { ...step, status: 'processing' };
+            }
+            return step;
+          }));
         }, delays[index]);
       });
+    } else if (initialStatus === 'processing') {
+      // Находим первый шаг со статусом 'waiting' и делаем его 'processing'
+      const firstWaitingIndex = steps.findIndex(step => step.status === 'waiting');
+      if (firstWaitingIndex !== -1) {
+        setSteps(prev => prev.map((step, i) => 
+          i === firstWaitingIndex ? { ...step, status: 'processing' } : step
+        ));
+      }
     }
   }, [initialStatus]);
 
@@ -100,4 +113,4 @@ const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus = 'queu
   );
 };
 
-export default ProcessingSteps; 
+export default ProcessingSteps;
