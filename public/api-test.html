@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестирование API Confbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .result {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #00784B;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #006b42;
+        }
+        .success {
+            color: #00784B;
+        }
+        .error {
+            color: #e53e3e;
+        }
+        .loading {
+            color: #3182ce;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тестирование API Confbot</h1>
+
+    <div class="test-section">
+        <h2>📋 Получение списка встреч</h2>
+        <button onclick="testGetMeetings()">Запустить тест</button>
+        <div id="meetings-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Получение деталей встречи</h2>
+        <input type="text" id="meeting-id" placeholder="ID встречи">
+        <button onclick="testGetMeeting()">Запустить тест</button>
+        <div id="meeting-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎵 Получение примеров записей</h2>
+        <input type="text" id="record-id" placeholder="ID записи">
+        <button onclick="testGetSamples()">Запустить тест</button>
+        <div id="samples-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📤 Загрузка аудио файла</h2>
+        <input type="file" id="audio-file" accept=".mp3,.wav">
+        <button onclick="testUploadAudio()">Запустить тест</button>
+        <div id="upload-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5173/confbot/v1';
+
+        async function handleResponse(response, resultDiv) {
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            return response.json();
+        }
+
+        async function testGetMeetings() {
+            const resultDiv = document.getElementById('meetings-result');
+            resultDiv.innerHTML = '<span class="loading">⏳ Загрузка...</span>';
+            try {
+                const response = await fetch(`${API_URL}/meetings`);
+                const data = await handleResponse(response, resultDiv);
+                resultDiv.innerHTML = `<span class="success">✅ Успешно!</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Ошибка:</span>\n${error.message}`;
+            }
+        }
+
+        async function testGetMeeting() {
+            const meetingId = document.getElementById('meeting-id').value;
+            const resultDiv = document.getElementById('meeting-result');
+            if (!meetingId) {
+                resultDiv.innerHTML = '<span class="error">❌ Введите ID встречи</span>';
+                return;
+            }
+            resultDiv.innerHTML = '<span class="loading">⏳ Загрузка...</span>';
+            try {
+                const response = await fetch(`${API_URL}/meetings/${meetingId}`);
+                const data = await handleResponse(response, resultDiv);
+                resultDiv.innerHTML = `<span class="success">✅ Успешно!</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Ошибка:</span>\n${error.message}`;
+            }
+        }
+
+        async function testGetSamples() {
+            const recordId = document.getElementById('record-id').value;
+            const resultDiv = document.getElementById('samples-result');
+            if (!recordId) {
+                resultDiv.innerHTML = '<span class="error">❌ Введите ID записи</span>';
+                return;
+            }
+            resultDiv.innerHTML = '<span class="loading">⏳ Загрузка...</span>';
+            try {
+                const response = await fetch(`${API_URL}/recordings/${recordId}/samples`);
+                const data = await handleResponse(response, resultDiv);
+                resultDiv.innerHTML = `<span class="success">✅ Успешно!</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Ошибка:</span>\n${error.message}`;
+            }
+        }
+
+        async function testUploadAudio() {
+            const fileInput = document.getElementById('audio-file');
+            const resultDiv = document.getElementById('upload-result');
+            
+            if (!fileInput.files.length) {
+                resultDiv.innerHTML = '<span class="error">❌ Выберите файл</span>';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            resultDiv.innerHTML = '<span class="loading">⏳ Загрузка...</span>';
+            try {
+                const response = await fetch(`${API_URL}/recordings`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await handleResponse(response, resultDiv);
+                resultDiv.innerHTML = `<span class="success">✅ Успешно!</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Ошибка:</span>\n${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html> 
