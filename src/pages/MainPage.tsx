@@ -1,12 +1,13 @@
 // src/pages/MainPage.tsx
 import React, { useState } from 'react';
-import { Box, Typography, Button, Paper } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Box, Typography, Button, Paper, Grid, Chip, IconButton } from '@mui/material';
+import { Add as AddIcon, ArrowForward as ArrowForwardIcon } from '@mui/icons-material';
 import { ConferenceCard } from '../components/ConferenceCard';
 import { AddConferenceModal } from '../components/AddConferenceModal';
 import { AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
+import { motion } from 'framer-motion';
 
 interface Conference {
   id: string;
@@ -92,18 +93,13 @@ export const MainPage: React.FC = () => {
             }
           }}
         >
-          <AnimatePresence>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {conferences.map((conference) => (
-              <Box
+              <motion.div
                 key={conference.id}
-                onClick={() => handleConferenceClick(conference)}
-                sx={{ 
-                  cursor: conference.status === 'processing' ? 'default' : 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.01)',
-                    transition: 'transform 0.2s ease-in-out'
-                  }
-                }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
               >
                 <ConferenceCard
                   name={conference.name}
@@ -112,9 +108,9 @@ export const MainPage: React.FC = () => {
                   onEdit={() => handleEdit(conference.id)}
                   onDelete={() => handleDelete(conference.id)}
                 />
-              </Box>
+              </motion.div>
             ))}
-          </AnimatePresence>
+          </Box>
         </Paper>
 
         <Button

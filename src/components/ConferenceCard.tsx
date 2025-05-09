@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, IconButton, Typography, Box } from '@mui/material';
+import { Card, CardContent, IconButton, Typography, Box, Paper, Chip } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -63,7 +63,7 @@ export const ConferenceCard: React.FC<ConferenceCardProps> = ({
                   color: 'white',
                   px: 2,
                   py: 0.5,
-                  borderRadius: 1,
+                  borderRadius: 8,
                   mr: 2
                 }}
               >
