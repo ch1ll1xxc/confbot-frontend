@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { Box, Typography, Paper, IconButton, TextField, Button, Menu, MenuItem } from '@mui/material';
+import { Box, Typography, Paper, IconButton, TextField, Button, Menu, MenuItem, InputAdornment } from '@mui/material';
 import { 
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
   Download as DownloadIcon,
   Check as CheckIcon,
   Close as CloseIcon,
-  KeyboardArrowDown as ArrowDownIcon
+  KeyboardArrowDown as ArrowDownIcon,
+  Clear as ClearIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -15,18 +16,18 @@ interface AudioSample {
   duration: number;
   speaker: string;
   isPlaying: boolean;
-  progress: number;
 }
 
 const FileProcessing: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedFormat, setSelectedFormat] = useState<string>('');
   const [samples, setSamples] = useState<AudioSample[]>([
-    { id: '1', duration: 30, speaker: '', isPlaying: false, progress: 0 },
-    { id: '2', duration: 45, speaker: '', isPlaying: false, progress: 0 },
-    { id: '3', duration: 60, speaker: '', isPlaying: false, progress: 0 }
+    { id: '1', duration: 30, speaker: '', isPlaying: false },
+    { id: '2', duration: 45, speaker: '', isPlaying: false },
+    { id: '3', duration: 60, speaker: '', isPlaying: false }
   ]);
-  const intervalsRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const [participantName, setParticipantName] = useState('');
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const handleFormatClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -48,49 +49,19 @@ const FileProcessing: React.FC = () => {
   };
 
   const handlePlayPause = (id: string) => {
-    setSamples(prev => prev.map(sample => {
-      if (sample.id === id) {
-        const isPlaying = !sample.isPlaying;
-        
-        if (isPlaying) {
-          // Очищаем предыдущий интервал, если он существует
-          if (intervalsRef.current[id]) {
-            clearInterval(intervalsRef.current[id]);
-          }
-          
-          // Создаем новый интервал
-          intervalsRef.current[id] = setInterval(() => {
-            setSamples(current => current.map(s => {
-              if (s.id === id) {
-                const newProgress = s.progress + (100 / (s.duration * 10));
-                if (newProgress >= 100) {
-                  clearInterval(intervalsRef.current[id]);
-                  return { ...s, isPlaying: false, progress: 0 };
-                }
-                return { ...s, progress: newProgress };
-              }
-              return s;
-            }));
-          }, 100);
-        } else {
-          // Останавливаем интервал при паузе
-          if (intervalsRef.current[id]) {
-            clearInterval(intervalsRef.current[id]);
-          }
-        }
-        
-        return { ...sample, isPlaying };
-      }
-      return sample;
-    }));
+    setSamples(prev => prev.map(sample => 
+      sample.id === id ? { ...sample, isPlaying: !sample.isPlaying } : sample
+    ));
   };
 
-  // Очистка интервалов при размонтировании компонента
-  React.useEffect(() => {
-    return () => {
-      Object.values(intervalsRef.current).forEach(interval => clearInterval(interval));
-    };
-  }, []);
+  const handlePlaySample = () => {
+    setIsPlaying(!isPlaying);
+    // Здесь будет логика воспроизведения аудио
+  };
+
+  const handleDownload = () => {
+    // Здесь будет логика скачивания файла
+  };
 
   return (
     <Paper 
@@ -100,22 +71,49 @@ const FileProcessing: React.FC = () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 3
+        gap: 3,
+        borderRadius: 8
       }}
     >
-      {/* Исходный файл */}
       <Box>
         <Typography variant="h6" gutterBottom>
-          Исходный файл
+          Информация о файле
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography>conference_recording.mp3</Typography>
-          <IconButton color="primary">
-            <PlayIcon />
-          </IconButton>
-          <IconButton color="primary">
-            <DownloadIcon />
-          </IconButton>
+        <Typography variant="body2" color="text.secondary">
+          Название файла: conference_audio.mp3
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Размер: 15.4 MB
+        </Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end',
+          gap: 2
+        }}>
+          <Button
+            variant="outlined"
+            startIcon={isPlaying ? <PauseIcon /> : <PlayIcon />}
+            onClick={handlePlaySample}
+            sx={{ 
+              borderRadius: 8,
+              textTransform: 'none',
+              minWidth: 120
+            }}
+          >
+            {isPlaying ? 'Пауза' : 'Слушать'}
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={handleDownload}
+            sx={{ 
+              borderRadius: 8,
+              textTransform: 'none',
+              minWidth: 120
+            }}
+          >
+            Скачать
+          </Button>
         </Box>
       </Box>
 
@@ -124,16 +122,32 @@ const FileProcessing: React.FC = () => {
         <Typography variant="h6" gutterBottom>
           Итоговый файл
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2,
+          position: 'relative',
+          pr: 6
+        }}>
           <Typography>Конференция по ИИ</Typography>
           <Button
             endIcon={<ArrowDownIcon />}
             onClick={handleFormatClick}
             variant="outlined"
+            sx={{ 
+              borderRadius: 8,
+              minWidth: 150
+            }}
           >
-            {selectedFormat || 'Выберите формат'}
+            {selectedFormat || 'Выбрать формат'}
           </Button>
-          <IconButton color="primary">
+          <IconButton 
+            color="primary"
+            sx={{ 
+              position: 'absolute',
+              right: 0
+            }}
+          >
             <DownloadIcon />
           </IconButton>
         </Box>
@@ -163,58 +177,62 @@ const FileProcessing: React.FC = () => {
                 gap: 2,
                 p: 2,
                 backgroundColor: '#f5f5f5',
-                borderRadius: 1
+                borderRadius: 8,
+                position: 'relative'
               }}
             >
-              <Box
-                sx={{
-                  flex: 1,
-                  height: 40,
-                  backgroundColor: '#e0e0e0',
-                  borderRadius: 1,
-                  position: 'relative',
-                  overflow: 'hidden'
+              <IconButton
+                onClick={() => handlePlayPause(sample.id)}
+                sx={{ 
+                  color: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 120, 75, 0.1)'
+                  }
                 }}
               >
-                <motion.div
-                  animate={{
-                    width: `${sample.progress}%`,
-                    backgroundColor: '#00784B'
-                  }}
-                  transition={{ duration: 0.1 }}
-                  style={{
-                    position: 'absolute',
-                    height: '100%',
-                    left: 0,
-                    top: 0
-                  }}
-                />
-                <IconButton
-                  sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}
-                  onClick={() => handlePlayPause(sample.id)}
-                >
-                  {sample.isPlaying ? <PauseIcon /> : <PlayIcon />}
-                </IconButton>
-              </Box>
+                {sample.isPlaying ? <PauseIcon /> : <PlayIcon />}
+              </IconButton>
               <TextField
                 placeholder={`Участник_${sample.id}`}
                 value={sample.speaker}
                 onChange={(e) => handleSpeakerSubmit(sample.id, e.target.value)}
                 size="small"
-                sx={{ width: 200 }}
+                sx={{ 
+                  width: 200,
+                  '& .MuiOutlinedInput-root': { 
+                    borderRadius: 8 
+                  }
+                }}
+                InputProps={{
+                  endAdornment: sample.speaker && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => handleSpeakerSubmit(sample.id, '')}
+                        edge="end"
+                        sx={{ 
+                          color: 'text.secondary',
+                          '&:hover': {
+                            color: 'error.main'
+                          }
+                        }}
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
               />
               <IconButton 
                 color="success" 
                 onClick={() => handleSpeakerSubmit(sample.id, sample.speaker)}
                 disabled={!sample.speaker.trim()}
+                sx={{ 
+                  borderRadius: 8,
+                  position: 'absolute',
+                  right: 16
+                }}
               >
                 <CheckIcon />
-              </IconButton>
-              <IconButton 
-                color="error" 
-                onClick={() => handleSpeakerSubmit(sample.id, '')}
-              >
-                <CloseIcon />
               </IconButton>
             </Box>
           ))}

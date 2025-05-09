@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Grid } from '@mui/material';
 import { Header } from '../components/Header';
 import ProcessingSteps from '../components/ProcessingSteps';
-import ChatInterface from '../components/ChatInterface';
+import { ChatInterface } from '../components/ChatInterface';
 import FileProcessing from '../components/FileProcessing';
 import { useLocation } from 'react-router-dom';
 

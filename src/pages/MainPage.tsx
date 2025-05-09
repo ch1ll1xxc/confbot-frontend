@@ -1,6 +1,6 @@
 // src/pages/MainPage.tsx
 import React, { useState } from 'react';
-import { Button, Box, Paper } from '@mui/material';
+import { Box, Typography, Button, Paper } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { ConferenceCard } from '../components/ConferenceCard';
 import { AddConferenceModal } from '../components/AddConferenceModal';
@@ -67,14 +67,12 @@ export const MainPage: React.FC = () => {
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
       <Header />
       
-      {/* Основной контент */}
       <Box sx={{ 
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         minHeight: 'calc(100vh - 200px)'
       }}>
-        {/* Список конференций */}
         <Paper 
           elevation={3} 
           sx={{ 
@@ -83,9 +81,11 @@ export const MainPage: React.FC = () => {
             mb: 3,
             maxHeight: 'calc(100vh - 300px)',
             overflowY: 'auto',
+            borderRadius: 8,
             '& .MuiCard-root': {
               minWidth: '100%',
               mb: 4,
+              borderRadius: 8,
               '&:last-child': {
                 mb: 0
               }
@@ -97,7 +97,13 @@ export const MainPage: React.FC = () => {
               <Box
                 key={conference.id}
                 onClick={() => handleConferenceClick(conference)}
-                sx={{ cursor: conference.status === 'processing' ? 'default' : 'pointer' }}
+                sx={{ 
+                  cursor: conference.status === 'processing' ? 'default' : 'pointer',
+                  '&:hover': {
+                    transform: 'scale(1.01)',
+                    transition: 'transform 0.2s ease-in-out'
+                  }
+                }}
               >
                 <ConferenceCard
                   name={conference.name}
@@ -111,7 +117,6 @@ export const MainPage: React.FC = () => {
           </AnimatePresence>
         </Paper>
 
-        {/* Кнопка добавления */}
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -121,10 +126,16 @@ export const MainPage: React.FC = () => {
             mt: 2,
             px: 4,
             py: 1.5,
-            fontSize: '1.1rem'
+            fontSize: '1.1rem',
+            borderRadius: 8,
+            textTransform: 'none',
+            '&:hover': {
+              transform: 'scale(1.05)',
+              transition: 'transform 0.2s ease-in-out'
+            }
           }}
         >
-          Добавить
+          Добавить конференцию
         </Button>
       </Box>
 

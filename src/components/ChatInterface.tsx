@@ -1,42 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, IconButton, Paper, Typography } from '@mui/material';
+import { Box, Paper, Typography, TextField, InputAdornment } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-}
+const loremIpsum = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`;
 
-const ChatInterface: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [question, setQuestion] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+export const ChatInterface: React.FC = () => {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isTyping, setIsTyping] = useState(true);
 
-  const handleQuestionSubmit = () => {
-    if (question.trim()) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        text: question,
-        isUser: true
-      };
-      setMessages(prev => [...prev, userMessage]);
-      setQuestion('');
-      setIsTyping(true);
+  useEffect(() => {
+    let currentIndex = 0;
+    const typingSpeed = 30; // миллисекунды между символами
 
-      // Имитация ответа бота
-      setTimeout(() => {
-        const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: 'Рандом',
-          isUser: false
-        };
-        setMessages(prev => [...prev, botMessage]);
+    const typingInterval = setInterval(() => {
+      if (currentIndex < loremIpsum.length) {
+        setDisplayedText(prev => prev + loremIpsum[currentIndex]);
+        currentIndex++;
+      } else {
         setIsTyping(false);
-      }, 1000);
-    }
-  };
+        clearInterval(typingInterval);
+      }
+    }, typingSpeed);
+
+    return () => clearInterval(typingInterval);
+  }, []);
 
   return (
     <Paper 
@@ -46,95 +34,97 @@ const ChatInterface: React.FC = () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 2
+        borderRadius: 8,
+        backgroundColor: 'background.paper'
       }}
     >
-      <Box
-        sx={{
-          flex: 1,
-          overflowY: 'auto',
-          mb: 2,
-          p: 2,
-          backgroundColor: '#f5f5f5',
-          borderRadius: 1,
-          minHeight: '300px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2
+      <TextField
+        fullWidth
+        placeholder="Поиск по анализу конференции..."
+        variant="outlined"
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon color="action" />
+            </InputAdornment>
+          ),
+          sx: {
+            borderRadius: 8,
+            backgroundColor: 'rgba(0, 0, 0, 0.02)',
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(0, 0, 0, 0.1)'
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'primary.main'
+            }
+          }
+        }}
+        sx={{ mb: 3 }}
+      />
+
+      <Typography 
+        variant="h6" 
+        gutterBottom
+        sx={{ 
+          color: 'primary.main',
+          fontWeight: 500
         }}
       >
+        Анализ конференции
+      </Typography>
+      
+      <Box sx={{ 
+        overflowY: 'auto',
+        p: 3,
+        backgroundColor: 'rgba(0, 0, 0, 0.02)',
+        borderRadius: 8,
+        position: 'relative',
+        height: '400px',
+        maxHeight: '400px',
+        '&::-webkit-scrollbar': {
+          width: '8px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'rgba(0, 0, 0, 0.05)',
+          borderRadius: '4px',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: 'rgba(0, 0, 0, 0.2)',
+          borderRadius: '4px',
+          '&:hover': {
+            background: 'rgba(0, 0, 0, 0.3)',
+          },
+        },
+      }}>
         <AnimatePresence>
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              style={{
-                alignSelf: message.isUser ? 'flex-end' : 'flex-start',
-                maxWidth: '80%'
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.6,
+                color: 'text.primary',
+                pr: 1
               }}
             >
-              <Box
-                sx={{
-                  p: 2,
-                  backgroundColor: message.isUser ? 'primary.main' : 'white',
-                  color: message.isUser ? 'white' : 'text.primary',
-                  borderRadius: 2,
-                  boxShadow: 1
-                }}
-              >
-                <Typography>{message.text}</Typography>
-              </Box>
-            </motion.div>
-          ))}
-          {isTyping && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={{
-                alignSelf: 'flex-start',
-                maxWidth: '80%'
-              }}
-            >
-              <Box
-                sx={{
-                  p: 2,
-                  backgroundColor: 'white',
-                  borderRadius: 2,
-                  boxShadow: 1
-                }}
-              >
-                <Typography>...</Typography>
-              </Box>
-            </motion.div>
-          )}
+              {displayedText}
+              {isTyping && (
+                <motion.span
+                  animate={{ opacity: [1, 0] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                  style={{ marginLeft: 4 }}
+                >
+                  |
+                </motion.span>
+              )}
+            </Typography>
+          </motion.div>
         </AnimatePresence>
-      </Box>
-
-      <Box sx={{ display: 'flex', gap: 1 }}>
-        <TextField
-          fullWidth
-          placeholder="Задайте вопрос"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
-              handleQuestionSubmit();
-            }
-          }}
-          sx={{ flex: 1 }}
-        />
-        <IconButton 
-          color="primary" 
-          onClick={handleQuestionSubmit}
-          disabled={!question.trim() || isTyping}
-        >
-          <SearchIcon />
-        </IconButton>
       </Box>
     </Paper>
   );
-};
-
-export default ChatInterface; 
+}; 

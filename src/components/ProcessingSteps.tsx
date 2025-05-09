@@ -135,5 +135,4 @@ const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus = 'queu
     </Paper>
   );
 };
-
 export default ProcessingSteps;
