@@ -5,26 +5,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const loremIpsum = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`;
 
-export const ChatInterface: React.FC = () => {
+interface ChatInterfaceProps {
+  shouldStartTyping: boolean;
+}
+
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ shouldStartTyping }) => {
   const [displayedText, setDisplayedText] = useState('');
-  const [isTyping, setIsTyping] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    let currentIndex = 0;
-    const typingSpeed = 30; // миллисекунды между символами
+    if (shouldStartTyping) {
+      setIsTyping(true);
+      let currentIndex = 0;
+      const typingSpeed = 30;
 
-    const typingInterval = setInterval(() => {
-      if (currentIndex < loremIpsum.length) {
-        setDisplayedText(prev => prev + loremIpsum[currentIndex]);
-        currentIndex++;
-      } else {
-        setIsTyping(false);
-        clearInterval(typingInterval);
-      }
-    }, typingSpeed);
+      const typingInterval = setInterval(() => {
+        if (currentIndex < loremIpsum.length) {
+          setDisplayedText(prev => prev + loremIpsum[currentIndex]);
+          currentIndex++;
+        } else {
+          setIsTyping(false);
+          clearInterval(typingInterval);
+        }
+      }, typingSpeed);
 
-    return () => clearInterval(typingInterval);
-  }, []);
+      return () => clearInterval(typingInterval);
+    }
+  }, [shouldStartTyping]);
 
   return (
     <Paper 
@@ -97,32 +104,34 @@ export const ChatInterface: React.FC = () => {
         },
       }}>
         <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                whiteSpace: 'pre-wrap',
-                lineHeight: 1.6,
-                color: 'text.primary',
-                pr: 1
-              }}
+          {shouldStartTyping && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
             >
-              {displayedText}
-              {isTyping && (
-                <motion.span
-                  animate={{ opacity: [1, 0] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                  style={{ marginLeft: 4 }}
-                >
-                  |
-                </motion.span>
-              )}
-            </Typography>
-          </motion.div>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: 1.6,
+                  color: 'text.primary',
+                  pr: 1
+                }}
+              >
+                {displayedText}
+                {isTyping && (
+                  <motion.span
+                    animate={{ opacity: [1, 0] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                    style={{ marginLeft: 4 }}
+                  >
+                    |
+                  </motion.span>
+                )}
+              </Typography>
+            </motion.div>
+          )}
         </AnimatePresence>
       </Box>
     </Paper>
