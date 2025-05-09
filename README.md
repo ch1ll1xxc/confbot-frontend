@@ -1,54 +1,74 @@
-# React + TypeScript + Vite
+# ConfBot Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend часть приложения для анализа конференций. Приложение позволяет загружать аудиофайлы конференций, обрабатывать их и получать структурированный анализ.
 
-Currently, two official plugins are available:
+## 🚀 Возможности
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Загрузка аудиофайлов конференций
+- Пошаговая обработка аудио с визуализацией прогресса
+- Транскрибация аудио в текст
+- Анализ текста с помощью ИИ
+- Генерация структурированного отчета
+- Поиск по анализу конференции
 
-## Expanding the ESLint configuration
+## 🛠 Технологии
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 18
+- TypeScript
+- Material-UI (MUI)
+- Framer Motion для анимаций
+- React Router для навигации
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## 📦 Установка
+
+1. Клонируйте репозиторий:
+```bash
+git clone git@github.com:ch1ll1xxc/confbot-frontend.git
+cd confbot-frontend
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+2. Установите зависимости:
+```bash
+npm install
 ```
+
+3. Запустите проект:
+```bash
+npm start
+```
+
+## 🏗 Структура проекта
+
+```
+src/
+├── components/     # React компоненты
+├── pages/         # Страницы приложения
+├── theme/         # Настройки темы MUI
+└── App.tsx        # Корневой компонент
+```
+
+## 🎨 Дизайн
+
+- Современный минималистичный дизайн
+- Адаптивная верстка
+- Анимации для улучшения UX
+- Зеленая цветовая схема
+
+## 🔄 Процесс обработки
+
+1. Загрузка файла
+2. Обработка аудио
+3. Транскрибация
+4. Анализ текста
+5. Формирование отчета
+
+## 🤝 Вклад в проект
+
+1. Форкните репозиторий
+2. Создайте ветку для ваших изменений
+3. Внесите изменения
+4. Создайте Pull Request
+
+## 📝 Лицензия
+
+MIT
