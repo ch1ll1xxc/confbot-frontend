@@ -1,54 +1,109 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Paper, Typography, LinearProgress } from '@mui/material';
 import { CheckCircle as CheckIcon, RadioButtonUnchecked as UncheckIcon } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as api from '../api';
 
 interface ProcessingStep {
   id: string;
   title: string;
   status: 'pending' | 'processing' | 'completed';
+  progress?: number;
 }
 
 interface ProcessingStepsProps {
+  conferenceId: string;
   initialStatus: string;
   onTranscriptionComplete: () => void;
 }
 
-export const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus, onTranscriptionComplete }) => {
+export const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ 
+  conferenceId, 
+  initialStatus, 
+  onTranscriptionComplete 
+}) => {
   const [steps, setSteps] = useState<ProcessingStep[]>([
     { id: '1', title: 'Загрузка файла', status: 'completed' },
-    { id: '2', title: 'Обработка аудио', status: 'processing' },
+    { id: '2', title: 'Обработка аудио', status: 'pending' },
     { id: '3', title: 'Транскрибация', status: 'pending' },
     { id: '4', title: 'Анализ текста', status: 'pending' },
     { id: '5', title: 'Формирование отчета', status: 'pending' }
   ]);
 
-  useEffect(() => {
-    const processSteps = async () => {
-      for (let i = 1; i < steps.length; i++) {
-        // Устанавливаем текущий этап в processing
-        setSteps(prev => prev.map((step, index) => 
-          index === i ? { ...step, status: 'processing' } : step
-        ));
+  const [currentProgress, setCurrentProgress] = useState(0);
 
-        // Случайная задержка от 4 до 9 секунд
-        const delay = Math.floor(Math.random() * (9000 - 4000 + 1)) + 4000;
-        await new Promise(resolve => setTimeout(resolve, delay));
+  const updateStepsFromStatus = useCallback((status: string) => {
+    switch (status) {
+      case 'pending':
+        setSteps(prev => prev.map((step, index) => ({
+          ...step,
+          status: index === 0 ? 'completed' : 'pending'
+        })));
+        break;
+      case 'processing':
+        setSteps(prev => prev.map((step, index) => ({
+          ...step,
+          status: index === 0 ? 'completed' : index === 1 ? 'processing' : 'pending'
+        })));
+        break;
+      case 'processed':
+        setSteps(prev => prev.map(step => ({ ...step, status: 'completed' })));
+        onTranscriptionComplete();
+        break;
+    }
+  }, [onTranscriptionComplete]);
 
-        // Завершаем текущий этап
-        setSteps(prev => prev.map((step, index) => 
-          index === i ? { ...step, status: 'completed' } : step
-        ));
-
-        // Если завершился этап транскрибации, вызываем колбэк
-        if (i === 2) { // Индекс 2 соответствует этапу "Транскрибация"
-          onTranscriptionComplete();
+  const startStatusPolling = useCallback(() => {
+    const pollStatus = async () => {
+      try {
+        const statusData = await api.getConferenceStatus(conferenceId);
+        
+        // Обновляем прогресс
+        setCurrentProgress(statusData.progress);
+        
+        // Обновляем этапы на основе данных API
+        if (statusData.stages) {
+          setSteps(prev => prev.map((step, index) => {
+            const apiStage = statusData.stages[index];
+            if (apiStage) {
+              return {
+                ...step,
+                status: apiStage.status === 'completed' ? 'completed' : 
+                       apiStage.status === 'processing' ? 'processing' : 'pending',
+                progress: apiStage.progress
+              };
+            }
+            return step;
+          }));
         }
+
+        // Если обработка завершена, останавливаем polling
+        if (statusData.status === 'completed') {
+          onTranscriptionComplete();
+          return;
+        }
+
+        // Продолжаем polling через 3 секунды
+        setTimeout(pollStatus, 3000);
+      } catch (error) {
+        console.error('Ошибка получения статуса:', error);
+        // В случае ошибки повторяем через 5 секунд
+        setTimeout(pollStatus, 5000);
       }
     };
 
-    processSteps();
-  }, []);
+    pollStatus();
+  }, [conferenceId, onTranscriptionComplete]);
+
+  useEffect(() => {
+    // Инициализируем статус на основе данных конференции
+    updateStepsFromStatus(initialStatus);
+    
+    // Если конференция еще обрабатывается, запускаем polling
+    if (initialStatus === 'processing' || initialStatus === 'pending') {
+      startStatusPolling();
+    }
+  }, [conferenceId, initialStatus, updateStepsFromStatus, startStatusPolling]);
 
   return (
     <Paper 
@@ -109,6 +164,8 @@ export const ProcessingSteps: React.FC<ProcessingStepsProps> = ({ initialStatus,
               </Typography>
               {step.status === 'processing' && (
                 <LinearProgress 
+                  variant={step.progress ? 'determinate' : 'indeterminate'}
+                  value={step.progress || currentProgress}
                   sx={{ 
                     height: 4,
                     borderRadius: 2,

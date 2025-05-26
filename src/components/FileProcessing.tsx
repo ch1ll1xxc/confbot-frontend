@@ -1,33 +1,53 @@
-import React, { useState, useRef } from 'react';
-import { Box, Typography, Paper, IconButton, TextField, Button, Menu, MenuItem, InputAdornment } from '@mui/material';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Box, Typography, Paper, IconButton, TextField, Button, Menu, MenuItem, InputAdornment, Alert, CircularProgress } from '@mui/material';
 import { 
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
   Download as DownloadIcon,
   Check as CheckIcon,
-  Close as CloseIcon,
+
   KeyboardArrowDown as ArrowDownIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
 
-interface AudioSample {
-  id: string;
-  duration: number;
-  speaker: string;
-  isPlaying: boolean;
+import * as api from '../api';
+
+interface FileProcessingProps {
+  conferenceId: string;
+  conference: api.Conference;
 }
 
-const FileProcessing: React.FC = () => {
+const FileProcessing: React.FC<FileProcessingProps> = ({ conferenceId, conference }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedFormat, setSelectedFormat] = useState<string>('');
-  const [samples, setSamples] = useState<AudioSample[]>([
-    { id: '1', duration: 30, speaker: '', isPlaying: false },
-    { id: '2', duration: 45, speaker: '', isPlaying: false },
-    { id: '3', duration: 60, speaker: '', isPlaying: false }
-  ]);
-  const [participantName, setParticipantName] = useState('');
+  const [samples, setSamples] = useState<api.Sample[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const [playingSampleId, setPlayingSampleId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
+  const loadSamples = useCallback(async () => {
+    try {
+      setLoading(true);
+      const samplesData = await api.getSamples(conferenceId);
+      setSamples(samplesData);
+    } catch (err) {
+      console.error('Ошибка загрузки samples:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка загрузки samples: ${err.message}`);
+      } else {
+        setError('Не удалось загрузить аудио фрагменты');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [conferenceId]);
+
+  useEffect(() => {
+    loadSamples();
+  }, [loadSamples]);
 
   const handleFormatClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -42,25 +62,165 @@ const FileProcessing: React.FC = () => {
     handleFormatClose();
   };
 
-  const handleSpeakerSubmit = (id: string, name: string) => {
-    setSamples(prev => prev.map(sample => 
-      sample.id === id ? { ...sample, speaker: name } : sample
-    ));
+  const handleSpeakerUpdate = async (sampleId: string, speakerName: string) => {
+    try {
+      await api.setSampleSpeaker(conferenceId, sampleId, speakerName);
+      setSamples(prev => prev.map(sample => 
+        sample.id === sampleId ? { ...sample, speaker_name: speakerName } : sample
+      ));
+    } catch (err) {
+      console.error('Ошибка обновления спикера:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка обновления: ${err.message}`);
+      } else {
+        setError('Не удалось обновить имя спикера');
+      }
+    }
   };
 
-  const handlePlayPause = (id: string) => {
-    setSamples(prev => prev.map(sample => 
-      sample.id === id ? { ...sample, isPlaying: !sample.isPlaying } : sample
-    ));
+  const handleSpeakerClear = async (sampleId: string) => {
+    try {
+      await api.resetSampleSpeaker(conferenceId, sampleId);
+      setSamples(prev => prev.map(sample => 
+        sample.id === sampleId ? { ...sample, speaker_name: '' } : sample
+      ));
+    } catch (err) {
+      console.error('Ошибка сброса спикера:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка сброса: ${err.message}`);
+      } else {
+        setError('Не удалось сбросить имя спикера');
+      }
+    }
   };
 
-  const handlePlaySample = () => {
-    setIsPlaying(!isPlaying);
-    // Здесь будет логика воспроизведения аудио
+  const handlePlayPause = async (sampleId: string) => {
+    try {
+      if (playingSampleId === sampleId && currentAudio) {
+        // Пауза текущего аудио
+        currentAudio.pause();
+        setPlayingSampleId(null);
+        setCurrentAudio(null);
+        return;
+      }
+
+      // Останавливаем предыдущее аудио
+      if (currentAudio) {
+        currentAudio.pause();
+      }
+
+      // Получаем аудио для sample
+      const audioBlob = await api.getSampleAudio(conferenceId, sampleId);
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      audio.onended = () => {
+        setPlayingSampleId(null);
+        setCurrentAudio(null);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.play();
+      setCurrentAudio(audio);
+      setPlayingSampleId(sampleId);
+    } catch (err) {
+      console.error('Ошибка воспроизведения:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка воспроизведения: ${err.message}`);
+      } else {
+        setError('Не удалось воспроизвести аудио');
+      }
+    }
   };
 
-  const handleDownload = () => {
-    // Здесь будет логика скачивания файла
+  const handlePlayMainAudio = async () => {
+    try {
+      if (isPlaying && currentAudio) {
+        currentAudio.pause();
+        setIsPlaying(false);
+        setCurrentAudio(null);
+        return;
+      }
+
+      const audioBlob = await api.getConferenceAudio(conferenceId);
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      
+      audio.onended = () => {
+        setIsPlaying(false);
+        setCurrentAudio(null);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.play();
+      setCurrentAudio(audio);
+      setIsPlaying(true);
+    } catch (err) {
+      console.error('Ошибка воспроизведения основного аудио:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка воспроизведения: ${err.message}`);
+      } else {
+        setError('Не удалось воспроизвести аудио');
+      }
+    }
+  };
+
+  const handleDownloadMainAudio = async () => {
+    try {
+      const audioBlob = await api.getConferenceAudio(conferenceId);
+      const url = URL.createObjectURL(audioBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${conference.name}.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Ошибка скачивания аудио:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка скачивания: ${err.message}`);
+      } else {
+        setError('Не удалось скачать аудио');
+      }
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    if (!selectedFormat) {
+      setError('Выберите формат отчета');
+      return;
+    }
+
+    try {
+      setDownloadingReport(true);
+      const format = selectedFormat.toLowerCase() as 'pdf' | 'docx' | 'txt';
+      const reportBlob = await api.getReport(conferenceId, format);
+      
+      const url = URL.createObjectURL(reportBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${conference.name}_report.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Ошибка скачивания отчета:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка скачивания отчета: ${err.message}`);
+      } else {
+        setError('Не удалось скачать отчет');
+      }
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -75,25 +235,39 @@ const FileProcessing: React.FC = () => {
         borderRadius: 8
       }}
     >
+      {error && (
+        <Alert 
+          severity="error" 
+          onClose={() => setError(null)}
+          sx={{ mb: 2 }}
+        >
+          {error}
+        </Alert>
+      )}
+
       <Box>
         <Typography variant="h6" gutterBottom>
           Информация о файле
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Название файла: conference_audio.mp3
+          Название: {conference.name}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Размер: 15.4 MB
+          Статус: {conference.status}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Создано: {new Date(conference.created_at).toLocaleDateString('ru-RU')}
         </Typography>
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'flex-end',
-          gap: 2
+          gap: 2,
+          mt: 2
         }}>
           <Button
             variant="outlined"
             startIcon={isPlaying ? <PauseIcon /> : <PlayIcon />}
-            onClick={handlePlaySample}
+            onClick={handlePlayMainAudio}
             sx={{ 
               borderRadius: 8,
               textTransform: 'none',
@@ -105,7 +279,7 @@ const FileProcessing: React.FC = () => {
           <Button
             variant="outlined"
             startIcon={<DownloadIcon />}
-            onClick={handleDownload}
+            onClick={handleDownloadMainAudio}
             sx={{ 
               borderRadius: 8,
               textTransform: 'none',
@@ -120,7 +294,7 @@ const FileProcessing: React.FC = () => {
       {/* Итоговый файл */}
       <Box>
         <Typography variant="h6" gutterBottom>
-          Итоговый файл
+          Итоговый отчет
         </Typography>
         <Box sx={{ 
           display: 'flex', 
@@ -129,7 +303,7 @@ const FileProcessing: React.FC = () => {
           position: 'relative',
           pr: 6
         }}>
-          <Typography>Конференция по ИИ</Typography>
+          <Typography>{conference.name}</Typography>
           <Button
             endIcon={<ArrowDownIcon />}
             onClick={handleFormatClick}
@@ -143,12 +317,14 @@ const FileProcessing: React.FC = () => {
           </Button>
           <IconButton 
             color="primary"
+            onClick={handleDownloadReport}
+            disabled={!selectedFormat || downloadingReport}
             sx={{ 
               position: 'absolute',
               right: 0
             }}
           >
-            <DownloadIcon />
+            {downloadingReport ? <CircularProgress size={24} /> : <DownloadIcon />}
           </IconButton>
         </Box>
         <Menu
@@ -165,78 +341,95 @@ const FileProcessing: React.FC = () => {
       {/* Аудио сэмплы */}
       <Box>
         <Typography variant="h6" gutterBottom>
-          Аудио сэмплы
+          Аудио фрагменты
         </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {samples.map((sample) => (
-            <Box
-              key={sample.id}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                p: 2,
-                backgroundColor: '#f5f5f5',
-                borderRadius: 8,
-                position: 'relative'
-              }}
-            >
-              <IconButton
-                onClick={() => handlePlayPause(sample.id)}
-                sx={{ 
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 120, 75, 0.1)'
-                  }
-                }}
-              >
-                {sample.isPlaying ? <PauseIcon /> : <PlayIcon />}
-              </IconButton>
-              <TextField
-                placeholder={`Участник_${sample.id}`}
-                value={sample.speaker}
-                onChange={(e) => handleSpeakerSubmit(sample.id, e.target.value)}
-                size="small"
-                sx={{ 
-                  width: 200,
-                  '& .MuiOutlinedInput-root': { 
-                    borderRadius: 8 
-                  }
-                }}
-                InputProps={{
-                  endAdornment: sample.speaker && (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => handleSpeakerSubmit(sample.id, '')}
-                        edge="end"
-                        sx={{ 
-                          color: 'text.secondary',
-                          '&:hover': {
-                            color: 'error.main'
-                          }
-                        }}
-                      >
-                        <ClearIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-              <IconButton 
-                color="success" 
-                onClick={() => handleSpeakerSubmit(sample.id, sample.speaker)}
-                disabled={!sample.speaker.trim()}
-                sx={{ 
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <CircularProgress />
+          </Box>
+        ) : samples.length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+            Аудио фрагменты не найдены
+          </Typography>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {samples.map((sample) => (
+              <Box
+                key={sample.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  p: 2,
+                  backgroundColor: '#f5f5f5',
                   borderRadius: 8,
-                  position: 'absolute',
-                  right: 16
+                  position: 'relative'
                 }}
               >
-                <CheckIcon />
-              </IconButton>
-            </Box>
-          ))}
-        </Box>
+                <IconButton
+                  onClick={() => handlePlayPause(sample.id)}
+                  sx={{ 
+                    color: 'primary.main',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 120, 75, 0.1)'
+                    }
+                  }}
+                >
+                  {playingSampleId === sample.id ? <PauseIcon /> : <PlayIcon />}
+                </IconButton>
+                <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDuration(sample.start_time)} - {formatDuration(sample.end_time)}
+                  </Typography>
+                  <TextField
+                    placeholder={sample.speaker_name || `Участник_${sample.id.slice(-4)}`}
+                    value={sample.speaker_name}
+                    onChange={(e) => {
+                      setSamples(prev => prev.map(s => 
+                        s.id === sample.id ? { ...s, speaker_name: e.target.value } : s
+                      ));
+                    }}
+                    size="small"
+                    sx={{ 
+                      width: 200,
+                      '& .MuiOutlinedInput-root': { 
+                        borderRadius: 8 
+                      }
+                    }}
+                    InputProps={{
+                      endAdornment: sample.speaker_name && (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => handleSpeakerClear(sample.id)}
+                            edge="end"
+                            sx={{ 
+                              color: 'text.secondary',
+                              '&:hover': {
+                                color: 'error.main'
+                              }
+                            }}
+                          >
+                            <ClearIcon />
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                </Box>
+                <IconButton 
+                  color="success" 
+                  onClick={() => handleSpeakerUpdate(sample.id, sample.speaker_name)}
+                  disabled={!sample.speaker_name?.trim()}
+                  sx={{ 
+                    borderRadius: 8
+                  }}
+                >
+                  <CheckIcon />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
+        )}
       </Box>
     </Paper>
   );

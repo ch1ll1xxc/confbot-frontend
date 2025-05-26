@@ -1,72 +1,119 @@
 // src/pages/MainPage.tsx
-import React, { useState } from 'react';
-import { Box, Typography, Button, Paper, Grid, Chip, IconButton } from '@mui/material';
-import { Add as AddIcon, ArrowForward as ArrowForwardIcon } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, Paper, Alert, CircularProgress } from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
 import { ConferenceCard } from '../components/ConferenceCard';
 import { AddConferenceModal } from '../components/AddConferenceModal';
-import { AnimatePresence } from 'framer-motion';
+
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { motion } from 'framer-motion';
-
-interface Conference {
-  id: string;
-  name: string;
-  uploadDate: string;
-  status: 'processed' | 'processing' | 'queued';
-}
+import * as api from '../api';
 
 export const MainPage: React.FC = () => {
-  const [conferences, setConferences] = useState<Conference[]>([
-    {
-      id: '1',
-      name: 'Конференция по ИИ',
-      uploadDate: '15.04.2025',
-      status: 'processed'
-    },
-    {
-      id: '2',
-      name: 'Семинар по машинному обучению',
-      uploadDate: '14.04.2025',
-      status: 'processing'
-    },
-    {
-      id: '3',
-      name: 'Воркшоп по NLP',
-      uploadDate: '13.04.2025',
-      status: 'queued'
-    }
-  ]);
-
+  const [conferences, setConferences] = useState<api.Conference[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  const handleAddConference = (name: string, file: File) => {
-    const newConference: Conference = {
-      id: Date.now().toString(),
-      name,
-      uploadDate: new Date().toLocaleDateString('ru-RU'),
-      status: 'queued'
-    };
-    setConferences([newConference, ...conferences]);
-    setIsModalOpen(false);
+  // Загрузка конференций при монтировании компонента
+  useEffect(() => {
+    loadConferences();
+  }, []);
+
+  const loadConferences = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.getConferences();
+      setConferences(response.conferences);
+    } catch (err) {
+      console.error('Ошибка загрузки конференций:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка загрузки: ${err.message}`);
+      } else {
+        setError('Не удалось загрузить конференции');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddConference = async (name: string, file: File) => {
+    try {
+      setError(null);
+      const newConference = await api.createConference(name, file);
+      setConferences([newConference, ...conferences]);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('Ошибка создания конференции:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка создания: ${err.message}`);
+      } else {
+        setError('Не удалось создать конференцию');
+      }
+    }
   };
 
   const handleEdit = (id: string) => {
     console.log('Edit conference:', id);
+    // TODO: Реализовать редактирование
   };
 
-  const handleDelete = (id: string) => {
-    setConferences(conferences.filter(conf => conf.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      setError(null);
+      await api.deleteConference(id);
+      setConferences(conferences.filter(conf => conf.id !== id));
+    } catch (err) {
+      console.error('Ошибка удаления конференции:', err);
+      if (err instanceof api.ApiError) {
+        setError(`Ошибка удаления: ${err.message}`);
+      } else {
+        setError('Не удалось удалить конференцию');
+      }
+    }
   };
 
-  const handleConferenceClick = (conference: Conference) => {
-    navigate('/processing', { state: { status: conference.status } });
+  const handleConferenceClick = (conference: api.Conference) => {
+    navigate('/processing', { state: { conferenceId: conference.id, status: conference.status } });
   };
+
+  // Функция для форматирования даты
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ru-RU');
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
+        <Header />
+        <Box sx={{ 
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: 'calc(100vh - 200px)'
+        }}>
+          <CircularProgress size={60} />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
       <Header />
+      
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 2 }}
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
       
       <Box sx={{ 
         display: 'flex',
@@ -94,23 +141,34 @@ export const MainPage: React.FC = () => {
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {conferences.map((conference) => (
-              <motion.div
-                key={conference.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ConferenceCard
-                  name={conference.name}
-                  uploadDate={conference.uploadDate}
-                  status={conference.status}
-                  onEdit={() => handleEdit(conference.id)}
-                  onDelete={() => handleDelete(conference.id)}
-                  onClick={() => handleConferenceClick(conference)}
-                />
-              </motion.div>
-            ))}
+            {conferences.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="h6" color="text.secondary">
+                  Конференции не найдены
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Добавьте первую конференцию, нажав кнопку ниже
+                </Typography>
+              </Box>
+            ) : (
+              conferences.map((conference) => (
+                <motion.div
+                  key={conference.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ConferenceCard
+                    name={conference.name}
+                    uploadDate={formatDate(conference.created_at)}
+                    status={conference.status}
+                    onEdit={() => handleEdit(conference.id)}
+                    onDelete={() => handleDelete(conference.id)}
+                    onClick={() => handleConferenceClick(conference)}
+                  />
+                </motion.div>
+              ))
+            )}
           </Box>
         </Paper>
 

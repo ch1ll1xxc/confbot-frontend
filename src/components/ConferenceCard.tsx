@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 interface ConferenceCardProps {
   name: string;
   uploadDate: string;
-  status: 'processed' | 'processing' | 'queued';
+  status: 'processed' | 'processing' | 'pending' | 'queued';
   onEdit: () => void;
   onDelete: () => void;
   onClick: () => void;
@@ -15,12 +15,14 @@ interface ConferenceCardProps {
 const statusColors = {
   processed: '#4CAF50',
   processing: '#FFC107',
+  pending: '#FF9800',
   queued: '#2196F3'
 };
 
 const statusText = {
   processed: 'Обработано',
   processing: 'В обработке',
+  pending: 'Ожидает',
   queued: 'В очереди'
 };
 
